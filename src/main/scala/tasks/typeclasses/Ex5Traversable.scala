@@ -1,6 +1,9 @@
 package u04lab
-import u03.Sequences.* 
-import Sequence.*
+
+import u03.Optionals.*
+import u03.Optionals.Optional.*
+import u03.Sequences.*
+import u03.Sequences.Sequence.*
 
 /*  Exercise 5: 
  *  - Generalise by ad-hoc polymorphism logAll, such that:
@@ -17,10 +20,44 @@ import Sequence.*
 
 object Ex5Traversable:
 
-  def log[A](a: A): Unit = println("The next element is: "+a)
+  trait Traversable[T[_]]:
+    def accept[A](t: T[A], log: A => Unit): Unit
 
-  def logAll[A](seq: Sequence[A]): Unit = seq match
-    case Cons(h, t) => log(h); logAll(t)
-    case _ => ()
+  def logAll[T[_]: Traversable, A](elem: T[A], log: A => Unit): Unit =
+    summon[Traversable[T]].accept(elem, log)
+
+  given Traversable[Sequence] with
+    def accept [A](t: Sequence[A], log: A => Unit): Unit = t match
+      case Cons(h, t) => log(h); logAll(t, log)
+      case _ => ()
+
+  given Traversable[Optional] with
+    def accept [A](t: Optional[A], log: A => Unit): Unit = t match
+      case Just(a) => log(a)
+      case _ => ()
+
+  @main def tryTraversable(): Unit =
+    val seq: Sequence[Int] = Cons(5, Cons(6, Cons(7, Nil())))
+    val opt: Optional[Double] = Just(2.3)
+    val emptySeq: Sequence[_] = Nil()
+    val emptyOpt: Optional[_] = Empty()
+
+    def log[A](a: A): Unit = println("The next element is: " + a)
+
+    logAll(seq, log) // "The next element is: 5"
+                     // "The next element is: 6"
+                     // "The next element is: 7"
+    logAll(opt, log) // "The next element is: 2.3"
+    logAll(emptySeq, log) // nothing
+    logAll(emptyOpt, log) // nothing
+
+    def print() = println(_)
+
+    logAll(seq, print()) // "5"
+                         // "6"
+                         // "7"
+    logAll(opt, print()) // "2.3"
+    logAll(emptySeq, print()) // nothing
+    logAll(emptyOpt, print()) // nothing
 
   
